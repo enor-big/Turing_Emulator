@@ -1,0 +1,27 @@
+# Qt Creator
+*.pro.user
+*.pro.user.*
+.qtcreator/
+
+# Build folders
+build/
+debug/
+release/
+
+# Generated files
+Makefile
+Makefile.Debug
+Makefile.Release
+moc_*.cpp
+moc_predefs.h
+object_script.*.Release
+object_script.*.Debug
+
+# Compiled objects
+*.o
+*.obj
+*.exe
+
+# OS files
+.DS_Store
+Thumbs.db
