@@ -9,6 +9,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -28,6 +29,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_programTable(nullptr)
 {
     setupUi();
+    setControlsEnabledAfterAlphabet(false);
+
+    connect(m_setAlphabetsButton, &QPushButton::clicked,this,
+            &MainWindow::onSetAlphabetClicked);
 }
 MainWindow::~MainWindow()
 {
@@ -46,9 +51,11 @@ void MainWindow::setupUi()
 
     QLabel *tapeAlphabetLabel = new QLabel("Алфавит ленты:", alphabetsGroup);
     m_tapeAlphabetEdit = new QLineEdit(alphabetsGroup);
+    m_tapeAlphabetEdit->setPlaceholderText("01_");
 
     QLabel *extraAlphabetLabel = new QLabel("Доп. символы:", alphabetsGroup);
     m_extraAlphabetEdit = new QLineEdit(alphabetsGroup);
+    m_extraAlphabetEdit->setPlaceholderText("*#");
 
     m_setAlphabetsButton = new QPushButton("Задать алфавиты", alphabetsGroup);
 
@@ -90,7 +97,7 @@ void MainWindow::setupUi()
     QGroupBox *tapeGroup = new QGroupBox("Лента", m_centralWidget);
     QVBoxLayout *tapeLayout = new QVBoxLayout(tapeGroup);
 
-    m_tapeViewLabel = new QLabel("Здесь позже будет визуализация ленты и каретки", tapeGroup);
+    m_tapeViewLabel = new QLabel("Сначала задайте алфавит, потом строку", tapeGroup);
     m_tapeViewLabel->setMinimumHeight(120);
     m_tapeViewLabel->setAlignment(Qt::AlignCenter);
     m_tapeViewLabel->setStyleSheet(
@@ -105,7 +112,7 @@ void MainWindow::setupUi()
 
     QGroupBox *programGroup = new QGroupBox("Программа машины", m_centralWidget);
     QVBoxLayout *programLayout = new QVBoxLayout(programGroup);
-
+/*
     m_programTable = new QTableWidget(programGroup);
     m_programTable->setColumnCount(5);
     m_programTable->setRowCount(5);
@@ -113,7 +120,8 @@ void MainWindow::setupUi()
     QStringList headers;
     headers << "Состояние" << "0" << "1" << "_" << "Стоп";
     m_programTable->setHorizontalHeaderLabels(headers);
-
+*/
+    m_programTable = new QTableWidget(programGroup);
     m_programTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     m_programTable->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -127,6 +135,83 @@ void MainWindow::setupUi()
 /*
 */
 
+}
+QStringList MainWindow::parseAlphabet(const QString &text) const{
+    QStringList result;
+    const QString trimmedText = text.trimmed();
+
+    for (const QChar &ch : trimmedText){
+        if(ch.isSpace()){
+            continue;
+        }
+        const QString symbol(ch);
+        if (!result.contains(symbol)){
+            result<<symbol;
+        }
+    }
+    return result;
+}
+
+void MainWindow::setControlsEnabledAfterAlphabet(bool enabled){
+    m_inputWordEdit->setEnabled(enabled);
+    m_setWordButton->setEnabled(enabled);
+    m_programTable->setEnabled(enabled);
+}
+
+void MainWindow::onSetAlphabetClicked(){
+    const QString tapeText = m_tapeAlphabetEdit->text().trimmed();
+    const QString extraText = m_extraAlphabetEdit->text().trimmed();
+
+    if (tapeText.isEmpty()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Алфавит не должен быть пустым.");
+        return;
+    }
+
+    if (tapeText.contains(' ')) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Алфавит нужно вводить без пробелов. Введите заново.");
+        return;
+    }
+
+    if (!extraText.isEmpty() && extraText.contains(' ')) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Доп символы нужно вводить без пробелов. Введите заново.");
+        return;
+    }
+
+    m_tapeAlphabet = parseAlphabet(tapeText);
+    m_extraAlphabet = parseAlphabet(extraText);
+
+
+
+    updateProgramTable();
+    setControlsEnabledAfterAlphabet(true);
+
+    m_tapeViewLabel->setText("Алфавиты заданы. Теперь введите строку.");
+}
+
+void MainWindow::updateProgramTable(){
+    const int stateCount = 5;
+    const int columnCount = 1+m_tapeAlphabet.size();
+
+    m_programTable->clear();
+    m_programTable->setRowCount(stateCount);
+    m_programTable->setColumnCount(columnCount);
+
+    QStringList headers;
+    headers << "Состояние";
+    headers << m_tapeAlphabet;
+
+    m_programTable->setHorizontalHeaderLabels(headers);
+
+    for(int row =0; row < stateCount;++row){
+        QTableWidgetItem *stateItem = new QTableWidgetItem(QString("q^1").arg(row));
+        m_programTable-> setItem(row, 0, stateItem);
+    }
 }
 
 

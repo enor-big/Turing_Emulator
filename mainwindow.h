@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QStringList>
 
 class QLineEdit;
 class QPushButton;
@@ -16,8 +17,13 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+private slots:
+    void onSetAlphabetClicked();
 private:
     void setupUi();
+    void updateProgramTable();
+    QStringList parseAlphabet(const QString &text) const;
+    void setControlsEnabledAfterAlphabet(bool enabled);
 private:
     QWidget *m_centralWidget;
     QLabel *m_tapeViewLabel;
@@ -35,6 +41,9 @@ private:
     QPushButton *m_slowerButton;
 
     QTableWidget *m_programTable;
+
+    QStringList m_tapeAlphabet;
+    QStringList m_extraAlphabet;
 };
 
 
