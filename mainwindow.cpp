@@ -33,6 +33,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_setAlphabetsButton, &QPushButton::clicked,this,
             &MainWindow::onSetAlphabetClicked);
+    connect(m_setWordButton, &QPushButton::clicked, this,
+            &MainWindow::onSetWordClicked);
 }
 MainWindow::~MainWindow()
 {
@@ -104,6 +106,7 @@ void MainWindow::setupUi()
         "QLabel {"
         "border: 1px solid gray;"
         "background-color: white;"
+        "color: black;"
         "font-size: 16px;"
         "}"
         );
@@ -158,6 +161,20 @@ void MainWindow::setControlsEnabledAfterAlphabet(bool enabled){
     m_programTable->setEnabled(enabled);
 }
 
+bool MainWindow::isWordValidForTapeAlphabet(const QString &word) const{
+    if (word.isEmpty()){
+        return false;
+    }
+
+    for (const QChar &ch :word){
+        const QString symbol(ch);
+        if (!m_tapeAlphabet.contains(symbol)){
+            return false;
+        }
+    }
+    return true;
+}
+
 void MainWindow::onSetAlphabetClicked(){
     const QString tapeText = m_tapeAlphabetEdit->text().trimmed();
     const QString extraText = m_extraAlphabetEdit->text().trimmed();
@@ -186,12 +203,39 @@ void MainWindow::onSetAlphabetClicked(){
     m_tapeAlphabet = parseAlphabet(tapeText);
     m_extraAlphabet = parseAlphabet(extraText);
 
-
-
     updateProgramTable();
     setControlsEnabledAfterAlphabet(true);
 
     m_tapeViewLabel->setText("Алфавиты заданы. Теперь введите строку.");
+}
+
+void MainWindow::onSetWordClicked()
+{
+    const QString word = m_inputWordEdit->text().trimmed();
+
+    if (word.isEmpty()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Входная строка не должна быть пустой.");
+        return;
+    }
+
+    if (word.contains(' ')) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Строку нужно вводить без пробелов.");
+        return;
+    }
+
+    if (!isWordValidForTapeAlphabet(word)) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Строка содержит символы, которых нет в алфавите ленты.");
+        return;
+    }
+
+    m_inputWord = word;
+    m_tapeViewLabel->setText(QString("Строка на ленте: %1").arg(m_inputWord));
 }
 
 void MainWindow::updateProgramTable(){
@@ -209,7 +253,7 @@ void MainWindow::updateProgramTable(){
     m_programTable->setHorizontalHeaderLabels(headers);
 
     for(int row =0; row < stateCount;++row){
-        QTableWidgetItem *stateItem = new QTableWidgetItem(QString("q^1").arg(row));
+        QTableWidgetItem *stateItem = new QTableWidgetItem(QString("q%1").arg(row));
         m_programTable-> setItem(row, 0, stateItem);
     }
 }

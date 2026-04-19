@@ -19,11 +19,13 @@ public:
     ~MainWindow();
 private slots:
     void onSetAlphabetClicked();
+    void onSetWordClicked();
 private:
     void setupUi();
     void updateProgramTable();
     QStringList parseAlphabet(const QString &text) const;
     void setControlsEnabledAfterAlphabet(bool enabled);
+    bool isWordValidForTapeAlphabet(const QString &word) const;
 private:
     QWidget *m_centralWidget;
     QLabel *m_tapeViewLabel;
@@ -44,6 +46,8 @@ private:
 
     QStringList m_tapeAlphabet;
     QStringList m_extraAlphabet;
+
+    QString m_inputWord;
 };
 
 
