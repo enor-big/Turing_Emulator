@@ -211,6 +211,10 @@ void MainWindow::onSetAlphabetClicked(){
     m_extraAlphabet = parseAlphabet(extraText);
     m_tableAlphabet = m_tapeAlphabet;
 
+    if (!m_tableAlphabet.contains((m_blankSymbol))){
+        m_tableAlphabet <<m_blankSymbol;
+    }
+
     for(const QString &symbol : m_extraAlphabet){
         if(!m_tableAlphabet.contains(symbol)){
             m_tableAlphabet <<symbol;
@@ -284,7 +288,7 @@ void MainWindow::resetMachineStateFromInput(){
 }
 
 void MainWindow::updateTapeView(){
-    if (m_tapeCells.empty()){
+    if (m_tapeCells.isEmpty()){
         m_tapeViewLabel->setText("Лента пуста");
         return;
     }
@@ -299,7 +303,7 @@ void MainWindow::updateTapeView(){
         } else{
             headText+="    ";
         }
-
+    }
         const QString fullText =
             QString("Состояние: %1\n%2\n%3")
                 .arg(m_currentState)
@@ -307,7 +311,7 @@ void MainWindow::updateTapeView(){
                 .arg(headText);
 
         m_tapeViewLabel->setText(fullText);
-    }
+
 }
 
 int MainWindow::findColumnForSymbol(const QString &symbol) const
@@ -425,10 +429,14 @@ void MainWindow::onStepClicked()
     if (moveDir == "L") {
         if (m_headPosition > 0) {
             --m_headPosition;
+        }else{
+            m_tapeCells.prepend(m_blankSymbol);
+            m_headPosition=0;
         }
     } else if (moveDir == "R") {
-        if (m_headPosition + 1 < m_tapeCells.size()) {
-            ++m_headPosition;
+        ++m_headPosition;
+        if (m_headPosition  >= m_tapeCells.size()) {
+            m_tapeCells <<m_blankSymbol;
         }
     }
 

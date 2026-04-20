@@ -56,6 +56,7 @@ private:
     QStringList m_tapeAlphabet;
     QStringList m_extraAlphabet;
     QStringList m_tableAlphabet;
+    const QString m_blankSymbol = "_";
 
     QString m_inputWord;
 
