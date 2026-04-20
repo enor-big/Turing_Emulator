@@ -26,7 +26,11 @@ MainWindow::MainWindow(QWidget *parent)
     m_resetButton(nullptr),
     m_fasterButton(nullptr),
     m_slowerButton(nullptr),
-    m_programTable(nullptr)
+    m_programTable(nullptr),
+    m_headPosition(0),
+    m_currentState("q0"),
+    m_isHalted(false)
+
 {
     setupUi();
     setControlsEnabledAfterAlphabet(false);
@@ -35,6 +39,9 @@ MainWindow::MainWindow(QWidget *parent)
             &MainWindow::onSetAlphabetClicked);
     connect(m_setWordButton, &QPushButton::clicked, this,
             &MainWindow::onSetWordClicked);
+    connect(m_stepButton, &QPushButton::clicked, this,
+            &MainWindow::onStepClicked);
+
 }
 MainWindow::~MainWindow()
 {
@@ -202,6 +209,13 @@ void MainWindow::onSetAlphabetClicked(){
 
     m_tapeAlphabet = parseAlphabet(tapeText);
     m_extraAlphabet = parseAlphabet(extraText);
+    m_tableAlphabet = m_tapeAlphabet;
+
+    for(const QString &symbol : m_extraAlphabet){
+        if(!m_tableAlphabet.contains(symbol)){
+            m_tableAlphabet <<symbol;
+        }
+    }
 
     updateProgramTable();
     setControlsEnabledAfterAlphabet(true);
@@ -235,12 +249,13 @@ void MainWindow::onSetWordClicked()
     }
 
     m_inputWord = word;
-    m_tapeViewLabel->setText(QString("Строка на ленте: %1").arg(m_inputWord));
+    resetMachineStateFromInput();
+    updateTapeView();
 }
 
 void MainWindow::updateProgramTable(){
     const int stateCount = 5;
-    const int columnCount = 1+m_tapeAlphabet.size();
+    const int columnCount = 1+m_tableAlphabet.size();
 
     m_programTable->clear();
     m_programTable->setRowCount(stateCount);
@@ -248,7 +263,7 @@ void MainWindow::updateProgramTable(){
 
     QStringList headers;
     headers << "Состояние";
-    headers << m_tapeAlphabet;
+    headers << m_tableAlphabet;
 
     m_programTable->setHorizontalHeaderLabels(headers);
 
@@ -258,4 +273,172 @@ void MainWindow::updateProgramTable(){
     }
 }
 
+void MainWindow::resetMachineStateFromInput(){
+    m_tapeCells.clear();
+    for (const QChar &ch : m_inputWord){
+        m_tapeCells<<QString(ch);
+    }
+    m_headPosition=0;
+    m_currentState="q0";
+    m_isHalted=false;
+}
+
+void MainWindow::updateTapeView(){
+    if (m_tapeCells.empty()){
+        m_tapeViewLabel->setText("Лента пуста");
+        return;
+    }
+    QString tapeText;
+    QString headText;
+
+    for (int i = 0;i < m_tapeCells.size();++i){
+        tapeText+= "[" +m_tapeCells[i] +"] ";
+
+        if (i ==m_headPosition){
+            headText+=" ^  ";
+        } else{
+            headText+="    ";
+        }
+
+        const QString fullText =
+            QString("Состояние: %1\n%2\n%3")
+                .arg(m_currentState)
+                .arg(tapeText.trimmed())
+                .arg(headText);
+
+        m_tapeViewLabel->setText(fullText);
+    }
+}
+
+int MainWindow::findColumnForSymbol(const QString &symbol) const
+{
+    for (int i = 0; i < m_tableAlphabet.size(); ++i) {
+        if (m_tableAlphabet[i] == symbol) {
+            return i + 1;
+        }
+    }
+
+    return -1;
+}
+
+bool MainWindow::parseCommand(const QString &text,
+                              QString &newSymbol,
+                              QString &moveDir,
+                              QString &newState) const
+{
+    const QString trimmed = text.trimmed();
+    const QStringList parts = trimmed.split(',', Qt::SkipEmptyParts);
+
+    if(parts.size() !=3){
+        return false;
+    }
+    newSymbol = parts[0].trimmed();
+    moveDir = parts[1].trimmed().toUpper();
+    newState = parts[2].trimmed();
+
+    if (newSymbol.size() != 1) {
+        return false;
+    }
+
+    if (moveDir != "L" && moveDir != "R" && moveDir != "S") {
+        return false;
+    }
+
+    if (newState.isEmpty()) {
+        return false;
+    }
+
+    return true;
+}
+
+void MainWindow::onStepClicked()
+{
+    if (m_inputWord.isEmpty()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Сначала задайте входную строку.");
+        return;
+    }
+
+    if (m_isHalted) {
+        QMessageBox::information(this,
+                                 "Остановка",
+                                 "Машина уже остановлена.");
+        return;
+    }
+
+    if (m_headPosition < 0 || m_headPosition >= m_tapeCells.size()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Головка вышла за границы ленты.");
+        return;
+    }
+
+    bool ok = false;
+    int row = -1;
+
+    if (m_currentState.startsWith('q')) {
+        const QString numberPart = m_currentState.mid(1);
+        row = numberPart.toInt(&ok);
+    }
+
+    if (!ok || row < 0 || row >= m_programTable->rowCount()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Текущее состояние не найдено в таблице.");
+        return;
+    }
+
+    const QString currentSymbol = m_tapeCells[m_headPosition];
+    const int column = findColumnForSymbol(currentSymbol);
+
+    if (column == -1) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Для текущего символа нет столбца в таблице.");
+        return;
+    }
+
+    QTableWidgetItem *item = m_programTable->item(row, column);
+
+    if (!item || item->text().trimmed().isEmpty()) {
+        QMessageBox::information(this,
+                                 "Остановка",
+                                 "Команда не задана. Машина остановлена.");
+        m_isHalted = true;
+        return;
+    }
+
+    QString newSymbol;
+    QString moveDir;
+    QString newState;
+
+    if (!parseCommand(item->text(), newSymbol, moveDir, newState)) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Неверный формат команды.\nИспользуй формат: символ,направление,состояние");
+        return;
+    }
+
+    m_tapeCells[m_headPosition] = newSymbol;
+
+    if (moveDir == "L") {
+        if (m_headPosition > 0) {
+            --m_headPosition;
+        }
+    } else if (moveDir == "R") {
+        if (m_headPosition + 1 < m_tapeCells.size()) {
+            ++m_headPosition;
+        }
+    }
+
+    if (newState.toUpper() == "HALT") {
+        m_currentState = "HALT";
+        m_isHalted = true;
+    } else {
+        m_currentState = newState;
+    }
+
+    updateTapeView();
+}
 

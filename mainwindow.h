@@ -20,12 +20,21 @@ public:
 private slots:
     void onSetAlphabetClicked();
     void onSetWordClicked();
+    void onStepClicked();
 private:
     void setupUi();
     void updateProgramTable();
     QStringList parseAlphabet(const QString &text) const;
     void setControlsEnabledAfterAlphabet(bool enabled);
     bool isWordValidForTapeAlphabet(const QString &word) const;
+
+    void resetMachineStateFromInput();
+    void updateTapeView();
+    int findColumnForSymbol(const QString &symbol) const;
+    bool parseCommand(const QString &text,
+                      QString &newSymbol,
+                      QString &moveDir,
+                      QString &newState) const;
 private:
     QWidget *m_centralWidget;
     QLabel *m_tapeViewLabel;
@@ -46,8 +55,14 @@ private:
 
     QStringList m_tapeAlphabet;
     QStringList m_extraAlphabet;
+    QStringList m_tableAlphabet;
 
     QString m_inputWord;
+
+    QStringList m_tapeCells;
+    int m_headPosition;
+    QString m_currentState;
+    bool m_isHalted;
 };
 
 
