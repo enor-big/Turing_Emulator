@@ -41,6 +41,8 @@ MainWindow::MainWindow(QWidget *parent)
             &MainWindow::onSetWordClicked);
     connect(m_stepButton, &QPushButton::clicked, this,
             &MainWindow::onStepClicked);
+    connect(m_resetButton, &QPushButton::clicked, this,
+            &MainWindow::onResetClicked);
 
 }
 MainWindow::~MainWindow()
@@ -447,6 +449,16 @@ void MainWindow::onStepClicked()
         m_currentState = newState;
     }
 
+    updateTapeView();
+}
+void MainWindow::onResetClicked(){
+    if (m_inputWord.isEmpty()){
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Сначала задайте входную строку");
+        return;
+    }
+    resetMachineStateFromInput();
     updateTapeView();
 }
 

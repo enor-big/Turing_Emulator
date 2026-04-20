@@ -21,6 +21,7 @@ private slots:
     void onSetAlphabetClicked();
     void onSetWordClicked();
     void onStepClicked();
+    void onResetClicked();
 private:
     void setupUi();
     void updateProgramTable();
