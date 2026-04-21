@@ -43,9 +43,14 @@ private:
                       QString &moveDir,
                       QString &newState) const;
     void setExecutionControlsRunning(bool running);
+
+    void updateSpeedLabel();
+    void updateStateHighLight();
 private:
     QWidget *m_centralWidget;
     QLabel *m_tapeViewLabel;
+    QLabel *m_speedLabel;
+
     QLineEdit *m_tapeAlphabetEdit;
     QLineEdit *m_extraAlphabetEdit;
     QPushButton *m_setAlphabetsButton;
@@ -74,6 +79,8 @@ private:
     bool m_isHalted;
     QTimer *m_timer;
     int m_stepIntervalMs;
+
+
 };
 
 

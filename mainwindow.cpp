@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
     m_centralWidget(nullptr),
     m_tapeViewLabel(nullptr),
+    m_speedLabel(nullptr),
     m_tapeAlphabetEdit(nullptr),
     m_extraAlphabetEdit(nullptr),
     m_setAlphabetsButton(nullptr),
@@ -121,6 +122,9 @@ void MainWindow::setupUi()
     controlsLayout->addWidget(m_fasterButton);
     controlsLayout->addWidget(m_slowerButton);
 
+    m_speedLabel = new QLabel(controlsGroup);
+    controlsLayout ->addWidget(m_speedLabel);
+
     QGroupBox *tapeGroup = new QGroupBox("Лента", m_centralWidget);
     QVBoxLayout *tapeLayout = new QVBoxLayout(tapeGroup);
 
@@ -162,6 +166,7 @@ void MainWindow::setupUi()
     mainLayout->addWidget(programGroup, 1);
 /*
 */
+    updateSpeedLabel();
 
 }
 QStringList MainWindow::parseAlphabet(const QString &text) const{
@@ -293,6 +298,7 @@ void MainWindow::updateProgramTable(){
         QTableWidgetItem *stateItem = new QTableWidgetItem(QString("q%1").arg(row));
         m_programTable-> setItem(row, 0, stateItem);
     }
+    updateStateHighLight();
 }
 
 void MainWindow::resetMachineStateFromInput(){
@@ -303,6 +309,7 @@ void MainWindow::resetMachineStateFromInput(){
     m_headPosition=0;
     m_currentState="q0";
     m_isHalted=false;
+    updateStateHighLight();
 }
 
 void MainWindow::updateTapeView(){
@@ -465,6 +472,7 @@ void MainWindow::onStepClicked()
         m_currentState = newState;
     }
 
+    updateStateHighLight();
     updateTapeView();
 }
 void MainWindow::onResetClicked()
@@ -562,6 +570,8 @@ void MainWindow::onFasterClicked()
         m_stepIntervalMs -= 100;
     }
 
+    updateSpeedLabel();
+
     if (m_timer->isActive()) {
         m_timer->start(m_stepIntervalMs);
     }
@@ -572,8 +582,49 @@ void MainWindow::onSlowerClicked()
     if (m_stepIntervalMs < 3000) {
         m_stepIntervalMs += 100;
     }
+    updateSpeedLabel();
 
     if (m_timer->isActive()) {
         m_timer->start(m_stepIntervalMs);
+    }
+}
+
+void MainWindow::updateSpeedLabel(){
+    if (!m_speedLabel){
+        return;
+    }
+    m_speedLabel->setText(QString("Скорость %1 мс").arg(m_stepIntervalMs));
+}
+
+void MainWindow::updateStateHighLight(){
+    for (int row = 0;row<m_programTable->rowCount();++row){
+        for (int col= 0;col<m_programTable->rowCount();++col){
+            QTableWidgetItem *item =m_programTable->item(row,col);
+            if(!item){
+                continue;
+            }
+            item->setBackground(Qt::white);
+            item->setBackground(Qt::black);
+        }
+    }
+    bool ok = false;
+    int row = -1;
+
+    if(m_currentState.startsWith('q')){
+        row = m_currentState.mid(1).toInt(&ok);
+    }
+
+    if (!ok ||row<0 || row>=m_programTable->rowCount()){
+        return;
+    }
+
+    for (int col = 0;col<m_programTable->columnCount();++col){
+        QTableWidgetItem *item = m_programTable->item(row, col);
+        if (!item) {
+            item = new QTableWidgetItem();
+            m_programTable->setItem(row, col, item);
+        }
+        item->setBackground(QBrush(QColor(54,224,208)));
+        item->setForeground(Qt::black);
     }
 }
