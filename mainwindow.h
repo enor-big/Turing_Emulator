@@ -10,6 +10,7 @@ class QTableWidget;
 class QLabel;
 class QWidget;
 class QTimer;
+class TapeView;
 
 class MainWindow : public QMainWindow
 {
@@ -48,7 +49,7 @@ private:
     void updateStateHighLight();
 private:
     QWidget *m_centralWidget;
-    QLabel *m_tapeViewLabel;
+    TapeView *m_tapeView;
     QLabel *m_speedLabel;
 
     QLineEdit *m_tapeAlphabetEdit;

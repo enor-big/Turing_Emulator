@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "tapeview.h"
 
 #include <QWidget>
 #include <QLabel>
@@ -15,7 +16,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
     m_centralWidget(nullptr),
-    m_tapeViewLabel(nullptr),
+    m_tapeView(nullptr),
     m_speedLabel(nullptr),
     m_tapeAlphabetEdit(nullptr),
     m_extraAlphabetEdit(nullptr),
@@ -128,19 +129,8 @@ void MainWindow::setupUi()
     QGroupBox *tapeGroup = new QGroupBox("Лента", m_centralWidget);
     QVBoxLayout *tapeLayout = new QVBoxLayout(tapeGroup);
 
-    m_tapeViewLabel = new QLabel("Сначала задайте алфавит, потом строку", tapeGroup);
-    m_tapeViewLabel->setMinimumHeight(120);
-    m_tapeViewLabel->setAlignment(Qt::AlignCenter);
-    m_tapeViewLabel->setStyleSheet(
-        "QLabel {"
-        "border: 1px solid gray;"
-        "background-color: white;"
-        "color: black;"
-        "font-size: 16px;"
-        "}"
-        );
-
-    tapeLayout->addWidget(m_tapeViewLabel);
+    m_tapeView = new TapeView(tapeGroup);
+    tapeLayout->addWidget(m_tapeView);
 
     QGroupBox *programGroup = new QGroupBox("Программа машины", m_centralWidget);
     QVBoxLayout *programLayout = new QVBoxLayout(programGroup);
@@ -247,7 +237,10 @@ void MainWindow::onSetAlphabetClicked(){
     updateProgramTable();
     setControlsEnabledAfterAlphabet(true);
 
-    m_tapeViewLabel->setText("Алфавиты заданы. Теперь введите строку.");
+    m_tapeCells.clear();
+    m_currentState = "q0";
+    m_headPosition = 0;
+    updateTapeView();
 }
 
 void MainWindow::onSetWordClicked()
@@ -313,29 +306,11 @@ void MainWindow::resetMachineStateFromInput(){
 }
 
 void MainWindow::updateTapeView(){
-    if (m_tapeCells.isEmpty()){
-        m_tapeViewLabel->setText("Лента пуста");
+    if (!m_tapeView) {
         return;
     }
-    QString tapeText;
-    QString headText;
 
-    for (int i = 0;i < m_tapeCells.size();++i){
-        tapeText+= "[" +m_tapeCells[i] +"] ";
-
-        if (i ==m_headPosition){
-            headText+=" ^  ";
-        } else{
-            headText+="    ";
-        }
-    }
-        const QString fullText =
-            QString("Состояние: %1\n%2\n%3")
-                .arg(m_currentState)
-                .arg(tapeText.trimmed())
-                .arg(headText);
-
-        m_tapeViewLabel->setText(fullText);
+    m_tapeView->setTape(m_tapeCells, m_headPosition, m_currentState, m_blankSymbol);
 
 }
 
