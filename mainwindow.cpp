@@ -10,6 +10,7 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QMessageBox>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -29,7 +30,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_programTable(nullptr),
     m_headPosition(0),
     m_currentState("q0"),
-    m_isHalted(false)
+    m_isHalted(false),
+    m_timer(nullptr),
+    m_stepIntervalMs(700)
 
 {
     setupUi();
@@ -43,6 +46,19 @@ MainWindow::MainWindow(QWidget *parent)
             &MainWindow::onStepClicked);
     connect(m_resetButton, &QPushButton::clicked, this,
             &MainWindow::onResetClicked);
+
+    m_timer = new QTimer(this);
+    connect(m_runButton, &QPushButton::clicked, this,
+            &MainWindow::onRunClicked);
+    connect(m_stopButton, &QPushButton::clicked, this,
+            &MainWindow::onStopClicked);
+    connect(m_fasterButton, &QPushButton::clicked, this,
+            &MainWindow::onFasterClicked);
+    connect(m_slowerButton, &QPushButton::clicked, this,
+            &MainWindow::onSlowerClicked);
+    connect(m_timer, &QTimer::timeout, this,
+            &MainWindow::onTimerTimeout);
+
 
 }
 MainWindow::~MainWindow()
@@ -451,14 +467,113 @@ void MainWindow::onStepClicked()
 
     updateTapeView();
 }
-void MainWindow::onResetClicked(){
-    if (m_inputWord.isEmpty()){
+void MainWindow::onResetClicked()
+{
+    if (m_timer->isActive()) {
+        m_timer->stop();
+    }
+
+    setExecutionControlsRunning(false);
+
+    if (m_inputWord.isEmpty()) {
         QMessageBox::warning(this,
                              "Ошибка",
-                             "Сначала задайте входную строку");
+                             "Сначала задайте входную строку.");
         return;
     }
+
     resetMachineStateFromInput();
     updateTapeView();
 }
 
+void MainWindow::setExecutionControlsRunning(bool running)
+{
+    m_tapeAlphabetEdit->setEnabled(!running);
+    m_extraAlphabetEdit->setEnabled(!running);
+    m_setAlphabetsButton->setEnabled(!running);
+
+    m_inputWordEdit->setEnabled(!running);
+    m_setWordButton->setEnabled(!running);
+
+    m_programTable->setEnabled(!running);
+
+    m_stepButton->setEnabled(!running);
+    m_runButton->setEnabled(!running);
+
+    m_stopButton->setEnabled(running);
+
+    m_resetButton->setEnabled(true);
+    m_fasterButton->setEnabled(true);
+    m_slowerButton->setEnabled(true);
+}
+
+void MainWindow::onRunClicked()
+{
+    if (m_inputWord.isEmpty()) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Сначала задайте входную строку.");
+        return;
+    }
+
+    if (m_isHalted) {
+        QMessageBox::information(this,
+                                 "Остановка",
+                                 "Машина уже остановлена. Нажмите Сброс или задайте строку заново.");
+        return;
+    }
+
+    if (m_timer->isActive()) {
+        return;
+    }
+
+    m_timer->start(m_stepIntervalMs);
+    setExecutionControlsRunning(true);
+}
+
+void MainWindow::onStopClicked()
+{
+    if (m_timer->isActive()) {
+        m_timer->stop();
+    }
+
+    setExecutionControlsRunning(false);
+}
+
+void MainWindow::onTimerTimeout()
+{
+    if (m_isHalted) {
+        m_timer->stop();
+        setExecutionControlsRunning(false);
+        return;
+    }
+
+    onStepClicked();
+
+    if (m_isHalted) {
+        m_timer->stop();
+        setExecutionControlsRunning(false);
+    }
+}
+
+void MainWindow::onFasterClicked()
+{
+    if (m_stepIntervalMs > 100) {
+        m_stepIntervalMs -= 100;
+    }
+
+    if (m_timer->isActive()) {
+        m_timer->start(m_stepIntervalMs);
+    }
+}
+
+void MainWindow::onSlowerClicked()
+{
+    if (m_stepIntervalMs < 3000) {
+        m_stepIntervalMs += 100;
+    }
+
+    if (m_timer->isActive()) {
+        m_timer->start(m_stepIntervalMs);
+    }
+}

@@ -9,6 +9,7 @@ class QPushButton;
 class QTableWidget;
 class QLabel;
 class QWidget;
+class QTimer;
 
 class MainWindow : public QMainWindow
 {
@@ -22,6 +23,11 @@ private slots:
     void onSetWordClicked();
     void onStepClicked();
     void onResetClicked();
+    void onRunClicked();
+    void onStopClicked();
+    void onTimerTimeout();
+    void onFasterClicked();
+    void onSlowerClicked();
 private:
     void setupUi();
     void updateProgramTable();
@@ -36,6 +42,7 @@ private:
                       QString &newSymbol,
                       QString &moveDir,
                       QString &newState) const;
+    void setExecutionControlsRunning(bool running);
 private:
     QWidget *m_centralWidget;
     QLabel *m_tapeViewLabel;
@@ -65,6 +72,8 @@ private:
     int m_headPosition;
     QString m_currentState;
     bool m_isHalted;
+    QTimer *m_timer;
+    int m_stepIntervalMs;
 };
 
 
