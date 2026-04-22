@@ -34,7 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_currentState("q0"),
     m_isHalted(false),
     m_timer(nullptr),
-    m_stepIntervalMs(700)
+    m_stepIntervalMs(700),
+    m_prependedLeft(false)
 
 {
     setupUi();
@@ -310,7 +311,12 @@ void MainWindow::updateTapeView(){
         return;
     }
 
-    m_tapeView->setTape(m_tapeCells, m_headPosition, m_currentState, m_blankSymbol);
+    m_tapeView->setTape(m_tapeCells,
+                        m_headPosition,
+                        m_currentState,
+                        m_blankSymbol,
+                        m_prependedLeft);
+    qDebug() << "head =" << m_headPosition << "state =" << m_currentState;
 
 }
 
@@ -425,6 +431,7 @@ void MainWindow::onStepClicked()
     }
 
     m_tapeCells[m_headPosition] = newSymbol;
+    m_prependedLeft = false;
 
     if (moveDir == "L") {
         if (m_headPosition > 0) {
@@ -432,6 +439,7 @@ void MainWindow::onStepClicked()
         }else{
             m_tapeCells.prepend(m_blankSymbol);
             m_headPosition=0;
+            m_prependedLeft = true;
         }
     } else if (moveDir == "R") {
         ++m_headPosition;
@@ -573,13 +581,13 @@ void MainWindow::updateSpeedLabel(){
 
 void MainWindow::updateStateHighLight(){
     for (int row = 0;row<m_programTable->rowCount();++row){
-        for (int col= 0;col<m_programTable->rowCount();++col){
+        for (int col= 0;col<m_programTable->columnCount();++col){
             QTableWidgetItem *item =m_programTable->item(row,col);
             if(!item){
                 continue;
             }
-            item->setBackground(Qt::white);
-            item->setBackground(Qt::black);
+            item->setBackground(QBrush(QColor(30, 30, 30)));
+            item->setForeground(QBrush(QColor(220, 220, 220)));
         }
     }
     bool ok = false;
@@ -599,7 +607,8 @@ void MainWindow::updateStateHighLight(){
             item = new QTableWidgetItem();
             m_programTable->setItem(row, col, item);
         }
-        item->setBackground(QBrush(QColor(54,224,208)));
-        item->setForeground(Qt::black);
+        item->setBackground(QBrush(QColor(55, 140, 135)));
+        item->setForeground(QBrush(QColor(255, 255, 255)));
     }
+
 }

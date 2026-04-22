@@ -81,6 +81,8 @@ private:
     QTimer *m_timer;
     int m_stepIntervalMs;
 
+    bool m_prependedLeft;
+
 
 };
 
