@@ -30,12 +30,15 @@ MainWindow::MainWindow(QWidget *parent)
     m_fasterButton(nullptr),
     m_slowerButton(nullptr),
     m_programTable(nullptr),
+    m_addStateButton(nullptr),
+    m_removeStateButton(nullptr),
     m_headPosition(0),
     m_currentState("q0"),
     m_isHalted(false),
     m_timer(nullptr),
     m_stepIntervalMs(700),
-    m_prependedLeft(false)
+    m_prependedLeft(false),
+    m_stateCount(1)
 
 {
     setupUi();
@@ -61,6 +64,11 @@ MainWindow::MainWindow(QWidget *parent)
             &MainWindow::onSlowerClicked);
     connect(m_timer, &QTimer::timeout, this,
             &MainWindow::onTimerTimeout);
+
+    connect(m_addStateButton, &QPushButton::clicked, this,
+            &MainWindow::onAddStateClicked);
+    connect(m_removeStateButton, &QPushButton::clicked, this,
+            &MainWindow::onRemoveStateClicked);
 
 
 }
@@ -135,6 +143,15 @@ void MainWindow::setupUi()
 
     QGroupBox *programGroup = new QGroupBox("Программа машины", m_centralWidget);
     QVBoxLayout *programLayout = new QVBoxLayout(programGroup);
+
+    QHBoxLayout *stateButtonsLayout = new QHBoxLayout();
+
+    m_addStateButton = new QPushButton("Добавить состояние", programGroup);
+    m_removeStateButton = new QPushButton("Удалить состояние", programGroup);
+
+    stateButtonsLayout->addWidget(m_addStateButton);
+    stateButtonsLayout->addWidget(m_removeStateButton);
+    stateButtonsLayout->addStretch();
 /*
     m_programTable = new QTableWidget(programGroup);
     m_programTable->setColumnCount(5);
@@ -149,6 +166,7 @@ void MainWindow::setupUi()
     m_programTable->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     programLayout->addWidget(m_programTable);
+    programLayout->addLayout(stateButtonsLayout);
 
     mainLayout->addWidget(alphabetsGroup);
     mainLayout->addWidget(wordGroup);
@@ -180,6 +198,8 @@ void MainWindow::setControlsEnabledAfterAlphabet(bool enabled){
     m_inputWordEdit->setEnabled(enabled);
     m_setWordButton->setEnabled(enabled);
     m_programTable->setEnabled(enabled);
+    m_addStateButton->setEnabled(enabled);
+    m_removeStateButton->setEnabled(enabled);
 }
 
 bool MainWindow::isWordValidForTapeAlphabet(const QString &word) const{
@@ -207,6 +227,13 @@ void MainWindow::onSetAlphabetClicked(){
         return;
     }
 
+    if (tapeText.contains(m_blankSymbol)) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Символ '_' является специальным символом пустоты и не может входить в алфавит ленты.");
+        return;
+    }
+
     if (tapeText.contains(' ')) {
         QMessageBox::warning(this,
                              "Ошибка",
@@ -218,6 +245,13 @@ void MainWindow::onSetAlphabetClicked(){
         QMessageBox::warning(this,
                              "Ошибка",
                              "Доп символы нужно вводить без пробелов. Введите заново.");
+        return;
+    }
+
+    if (extraText.contains(m_blankSymbol)) {
+        QMessageBox::warning(this,
+                             "Ошибка",
+                             "Символ '_' является специальным символом пустоты и не может входить в дополнительные символы.");
         return;
     }
 
@@ -274,12 +308,27 @@ void MainWindow::onSetWordClicked()
     updateTapeView();
 }
 
+QString MainWindow::findFirstInvalidWordSymbol(const QString &word) const
+{
+    for (const QChar &ch : word) {
+        const QString symbol(ch);
+
+        if (symbol == m_blankSymbol) {
+            return symbol;
+        }
+
+        if (!m_tapeAlphabet.contains(symbol)) {
+            return symbol;
+        }
+    }
+
+    return QString();
+}
 void MainWindow::updateProgramTable(){
-    const int stateCount = 5;
     const int columnCount = 1+m_tableAlphabet.size();
 
     m_programTable->clear();
-    m_programTable->setRowCount(stateCount);
+    m_programTable->setRowCount(m_stateCount);
     m_programTable->setColumnCount(columnCount);
 
     QStringList headers;
@@ -288,13 +337,54 @@ void MainWindow::updateProgramTable(){
 
     m_programTable->setHorizontalHeaderLabels(headers);
 
-    for(int row =0; row < stateCount;++row){
-        QTableWidgetItem *stateItem = new QTableWidgetItem(QString("q%1").arg(row));
-        m_programTable-> setItem(row, 0, stateItem);
-    }
+    refreshStateNames();
     updateStateHighLight();
 }
 
+void MainWindow::refreshStateNames()
+{
+    for (int row = 0; row < m_stateCount; ++row) {
+        QTableWidgetItem *stateItem = m_programTable->item(row, 0);
+        if (!stateItem) {
+            stateItem = new QTableWidgetItem();
+            m_programTable->setItem(row, 0, stateItem);
+        }
+
+        stateItem->setText(QString("q%1").arg(row));
+    }
+}
+
+void MainWindow::onAddStateClicked()
+{
+    ++m_stateCount;
+    updateProgramTable();
+}
+
+void MainWindow::onRemoveStateClicked()
+{
+    if (m_stateCount <= 1) {
+        QMessageBox::information(this,
+                                 "Информация",
+                                 "Нельзя удалить последнее состояние.");
+        return;
+    }
+
+    --m_stateCount;
+
+    bool ok = false;
+    int currentStateNumber = -1;
+
+    if (m_currentState.startsWith('q')) {
+        currentStateNumber = m_currentState.mid(1).toInt(&ok);
+    }
+
+    if (ok && currentStateNumber >= m_stateCount) {
+        m_currentState = QString("q%1").arg(m_stateCount - 1);
+    }
+
+    updateProgramTable();
+    updateTapeView();
+}
 void MainWindow::resetMachineStateFromInput(){
     m_tapeCells.clear();
     for (const QChar &ch : m_inputWord){
@@ -331,13 +421,19 @@ int MainWindow::findColumnForSymbol(const QString &symbol) const
     return -1;
 }
 
+
 bool MainWindow::parseCommand(const QString &text,
                               QString &newSymbol,
                               QString &moveDir,
                               QString &newState) const
 {
     const QString trimmed = text.trimmed();
-    const QStringList parts = trimmed.split(',', Qt::SkipEmptyParts);
+
+    if (trimmed.isEmpty()) {
+        return false;
+    }
+
+    const QStringList parts = trimmed.split(',', Qt::KeepEmptyParts);
 
     if(parts.size() !=3){
         return false;
@@ -346,16 +442,38 @@ bool MainWindow::parseCommand(const QString &text,
     moveDir = parts[1].trimmed().toUpper();
     newState = parts[2].trimmed();
 
-    if (newSymbol.size() != 1) {
+    if (newSymbol.isEmpty() && moveDir.isEmpty() && newState.isEmpty()) {
         return false;
     }
 
-    if (moveDir != "L" && moveDir != "R" && moveDir != "S") {
-        return false;
+    if (!newSymbol.isEmpty()) {
+        if (newSymbol.size() != 1) {
+            return false;
+        }
+
+        if (!m_tableAlphabet.contains(newSymbol)) {
+            return false;
+        }
     }
 
-    if (newState.isEmpty()) {
-        return false;
+    if (!moveDir.isEmpty()) {
+        if (moveDir != "L" && moveDir != "R" && moveDir != "S") {
+            return false;
+        }
+    }
+
+    if (!newState.isEmpty()) {
+        if (newState.toUpper() != "HALT") {
+            if (!newState.startsWith('q')) {
+                return false;
+            }
+
+            bool ok = false;
+            const int stateNumber = newState.mid(1).toInt(&ok);
+            if (!ok || stateNumber < 0 || stateNumber >= m_programTable->rowCount()) {
+                return false;
+            }
+        }
     }
 
     return true;
@@ -426,11 +544,13 @@ void MainWindow::onStepClicked()
     if (!parseCommand(item->text(), newSymbol, moveDir, newState)) {
         QMessageBox::warning(this,
                              "Ошибка",
-                             "Неверный формат команды.\nИспользуй формат: символ,направление,состояние");
+                             "Неверный формат команды.\nИспользуй формат: символ,направление,состояние\nНапример: b,R,q1 или ,L, или ,,HALT");
         return;
     }
 
-    m_tapeCells[m_headPosition] = newSymbol;
+    if (!newSymbol.isEmpty()) {
+        m_tapeCells[m_headPosition] = newSymbol;
+    }
     m_prependedLeft = false;
 
     if (moveDir == "L") {
@@ -447,12 +567,13 @@ void MainWindow::onStepClicked()
             m_tapeCells <<m_blankSymbol;
         }
     }
-
-    if (newState.toUpper() == "HALT") {
-        m_currentState = "HALT";
-        m_isHalted = true;
-    } else {
-        m_currentState = newState;
+    if (!newState.isEmpty()) {
+        if (newState.toUpper() == "HALT") {
+            m_currentState = "HALT";
+            m_isHalted = true;
+        } else {
+            m_currentState = newState;
+        }
     }
 
     updateStateHighLight();

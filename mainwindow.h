@@ -29,12 +29,15 @@ private slots:
     void onTimerTimeout();
     void onFasterClicked();
     void onSlowerClicked();
+    void onAddStateClicked();
+    void onRemoveStateClicked();
 private:
     void setupUi();
     void updateProgramTable();
     QStringList parseAlphabet(const QString &text) const;
     void setControlsEnabledAfterAlphabet(bool enabled);
     bool isWordValidForTapeAlphabet(const QString &word) const;
+    QString findFirstInvalidWordSymbol(const QString &word) const;
 
     void resetMachineStateFromInput();
     void updateTapeView();
@@ -47,6 +50,7 @@ private:
 
     void updateSpeedLabel();
     void updateStateHighLight();
+    void refreshStateNames();
 private:
     QWidget *m_centralWidget;
     TapeView *m_tapeView;
@@ -66,6 +70,8 @@ private:
     QPushButton *m_slowerButton;
 
     QTableWidget *m_programTable;
+    QPushButton *m_addStateButton;
+    QPushButton *m_removeStateButton;
 
     QStringList m_tapeAlphabet;
     QStringList m_extraAlphabet;
@@ -82,6 +88,7 @@ private:
     int m_stepIntervalMs;
 
     bool m_prependedLeft;
+    int m_stateCount;
 
 
 };
