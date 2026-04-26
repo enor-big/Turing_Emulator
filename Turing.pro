@@ -10,12 +10,14 @@ SOURCES += \
     headitem.cpp \
     main.cpp \
     mainwindow.cpp \
-    tapeview.cpp
+    tapeview.cpp \
+    Ресурсы/res.cpp
 
 HEADERS += \
     headitem.h \
     mainwindow.h \
     tapeview.h
+
 
 FORMS +=
 
@@ -23,3 +25,6 @@ FORMS +=
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    resourses.qrc
