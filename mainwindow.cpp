@@ -324,6 +324,7 @@ QString MainWindow::findFirstInvalidWordSymbol(const QString &word) const
 
     return QString();
 }
+
 void MainWindow::updateProgramTable(){
     const int columnCount = 1+m_tableAlphabet.size();
 
@@ -420,7 +421,6 @@ int MainWindow::findColumnForSymbol(const QString &symbol) const
 
     return -1;
 }
-
 
 bool MainWindow::parseCommand(const QString &text,
                               QString &newSymbol,
@@ -542,6 +542,10 @@ void MainWindow::onStepClicked()
     QString newState;
 
     if (!parseCommand(item->text(), newSymbol, moveDir, newState)) {
+        if (m_timer && m_timer->isActive()) {
+            m_timer->stop();
+            setExecutionControlsRunning(false);
+        }
         QMessageBox::warning(this,
                              "Ошибка",
                              "Неверный формат команды.\nИспользуй формат: символ,направление,состояние\nНапример: b,R,q1 или ,L, или ,,HALT");
@@ -579,6 +583,7 @@ void MainWindow::onStepClicked()
     updateStateHighLight();
     updateTapeView();
 }
+
 void MainWindow::onResetClicked()
 {
     if (m_timer->isActive()) {
@@ -632,6 +637,22 @@ void MainWindow::onRunClicked()
         QMessageBox::information(this,
                                  "Остановка",
                                  "Машина уже остановлена. Нажмите Сброс или задайте строку заново.");
+        return;
+    }
+
+    QString errorText;
+    if (!validateProgramTable(errorText)) {
+        QMessageBox::warning(this,
+                             "Ошибка программы машины",
+                             errorText);
+        return;
+    }
+
+    if (!hasHaltCommand()) {
+        QMessageBox::warning(this,
+                             "Ошибка программы машины",
+                             "В таблице нет ни одной команды с HALT.\n"
+                             "Добавьте хотя бы одну команду остановки, иначе запуск запрещён.");
         return;
     }
 
@@ -731,5 +752,66 @@ void MainWindow::updateStateHighLight(){
         item->setBackground(QBrush(QColor(55, 140, 135)));
         item->setForeground(QBrush(QColor(255, 255, 255)));
     }
+}
 
+bool MainWindow::hasHaltCommand() const
+{
+    for (int row = 0; row < m_programTable->rowCount(); ++row) {
+        for (int col = 1; col < m_programTable->columnCount(); ++col) {
+            QTableWidgetItem *item = m_programTable->item(row, col);
+            if (!item) {
+                continue;
+            }
+
+            const QString text = item->text().trimmed();
+            if (text.isEmpty()) {
+                continue;
+            }
+
+            QString newSymbol;
+            QString moveDir;
+            QString newState;
+
+            if (!parseCommand(text, newSymbol, moveDir, newState)) {
+                continue;
+            }
+
+            if (newState.toUpper() == "HALT") {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool MainWindow::validateProgramTable(QString &errorText) const
+{
+    for (int row = 0; row < m_programTable->rowCount(); ++row) {
+        for (int col = 1; col < m_programTable->columnCount(); ++col) {
+            QTableWidgetItem *item = m_programTable->item(row, col);
+            if (!item) {
+                continue;
+            }
+
+            const QString text = item->text().trimmed();
+            if (text.isEmpty()) {
+                continue;
+            }
+
+            QString newSymbol;
+            QString moveDir;
+            QString newState;
+
+            if (!parseCommand(text, newSymbol, moveDir, newState)) {
+                errorText = QString("Ошибка в строке q%1, столбце '%2'.\n"
+                                    "Команда содержит неверный формат или несуществующее состояние.")
+                                .arg(row)
+                                .arg(m_programTable->horizontalHeaderItem(col)->text());
+                return false;
+            }
+        }
+    }
+
+    return true;
 }

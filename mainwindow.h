@@ -31,6 +31,7 @@ private slots:
     void onSlowerClicked();
     void onAddStateClicked();
     void onRemoveStateClicked();
+
 private:
     void setupUi();
     void updateProgramTable();
@@ -89,6 +90,8 @@ private:
 
     bool m_prependedLeft;
     int m_stateCount;
+    bool hasHaltCommand() const;
+    bool validateProgramTable(QString &errorText) const;
 
 
 };
