@@ -463,7 +463,7 @@ bool MainWindow::parseCommand(const QString &text,
     }
 
     if (!newState.isEmpty()) {
-        if (newState.toUpper() != "HALT") {
+        if (newState.toUpper() != "!") {
             if (!newState.startsWith('q')) {
                 return false;
             }
@@ -548,7 +548,7 @@ void MainWindow::onStepClicked()
         }
         QMessageBox::warning(this,
                              "Ошибка",
-                             "Неверный формат команды.\nИспользуй формат: символ,направление,состояние\nНапример: b,R,q1 или ,L, или ,,HALT");
+                             "Неверный формат команды.\nИспользуй формат: символ,направление,состояние\nНапример: b,R,q1 или ,L, или ,,!");
         return;
     }
 
@@ -572,8 +572,8 @@ void MainWindow::onStepClicked()
         }
     }
     if (!newState.isEmpty()) {
-        if (newState.toUpper() == "HALT") {
-            m_currentState = "HALT";
+        if (newState.toUpper() == "!") {
+            m_currentState = "!";
             m_isHalted = true;
         } else {
             m_currentState = newState;
@@ -651,7 +651,7 @@ void MainWindow::onRunClicked()
     if (!hasHaltCommand()) {
         QMessageBox::warning(this,
                              "Ошибка программы машины",
-                             "В таблице нет ни одной команды с HALT.\n"
+                             "В таблице нет ни одной команды с !.\n"
                              "Добавьте хотя бы одну команду остановки, иначе запуск запрещён.");
         return;
     }
@@ -776,7 +776,7 @@ bool MainWindow::hasHaltCommand() const
                 continue;
             }
 
-            if (newState.toUpper() == "HALT") {
+            if (newState.toUpper() == "!") {
                 return true;
             }
         }
