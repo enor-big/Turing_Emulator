@@ -255,6 +255,19 @@ void MainWindow::onSetAlphabetClicked(){
         return;
     }
 
+    QStringList tapeSymbols = parseAlphabet(tapeText);
+    QStringList extraSymbols = parseAlphabet(extraText);
+
+    for (QString &symbol:extraSymbols){
+        if (tapeSymbols.contains(symbol)){
+            QMessageBox::warning(this,
+                                 "Ошибка",
+                                 QString("Символ '%1' встречается и в алфавите и в доп символах").arg(symbol));
+            return;
+
+        }
+    }
+
     m_tapeAlphabet = parseAlphabet(tapeText);
     m_extraAlphabet = parseAlphabet(extraText);
     m_tableAlphabet = m_tapeAlphabet;
